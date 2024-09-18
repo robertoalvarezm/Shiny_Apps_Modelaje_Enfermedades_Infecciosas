@@ -33,15 +33,15 @@ generate_automaton <- function(initial_state, rule, generations) {
 
 # UI
 ui <- page_sidebar(
-  title = "1-D Cellular Automaton",
+  title = "1-D Autómatas celulares",
   theme = bs_theme(version = 5, bootswatch = "flatly"),
   
   sidebar = sidebar(
     sliderInput("rule", "Regla (0-255)", min = 0, max = 255, value = 30, step = 1),
     sliderInput("generations", "Número de generaciones", min = 10, max = 200, value = 50, step = 10),
-    numericInput("cells", "Número of celdas", min = 10, max = 200, value = 100),
+    numericInput("cells", "Número de celdas", min = 10, max = 200, value = 100),
     selectInput("initial_state", "Estado inicial", 
-                choices = c("Single Cell", "Random", "All Ones"), 
+                choices = c("Una celda ocupada", "Aleatorio", "Todxs negrxs"), 
                 selected = "Single Cell"),
     actionButton("generate", "Correr autómata")
   ),
@@ -68,9 +68,9 @@ server <- function(input, output, session) {
   
   observeEvent(input$generate, {
     initial_state <- switch(input$initial_state,
-                            "Single Cell" = c(rep(0, floor(input$cells/2)), 1, rep(0, ceiling(input$cells/2) - 1)),
-                            "Random" = sample(c(0, 1), input$cells, replace = TRUE),
-                            "All Ones" = rep(1, input$cells))
+                            "Una celda ocupada" = c(rep(0, floor(input$cells/2)), 1, rep(0, ceiling(input$cells/2) - 1)),
+                            "Aleatorio" = sample(c(0, 1), input$cells, replace = TRUE),
+                            "Todxs negrxs" = rep(1, input$cells))
     
     automaton <- generate_automaton(initial_state, input$rule, input$generations)
     automaton_data(automaton)
@@ -87,8 +87,8 @@ server <- function(input, output, session) {
       geom_tile() +
       scale_fill_manual(values = c("0" = "white", "1" = "black")) +
       scale_y_reverse() +
-      labs(title = paste("1-D Cellular Automaton - Rule", input$rule),
-           x = "Cell", y = "Generation") +
+      labs(title = paste("1-D Autómata celular - Regla", input$rule),
+           x = "Celdas", y = "Generacion") +
       theme_minimal() +
       theme(legend.position = "none",
             panel.grid = element_blank(),
