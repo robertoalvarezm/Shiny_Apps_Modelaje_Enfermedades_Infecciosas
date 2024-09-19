@@ -1,0 +1,32 @@
+---
+title: "Actividad Modelo SIR"
+author: "Roberto Álvarez"
+date: "2024-09-18"
+output: html_document
+---
+
+
+
+1. A partir de un modelo SIR sin demografía muestra que para distintos valores de $R_0$
+
+- El máximo de infectados se encuentra en $t_{max}$ cuando $S(t_{max})=\frac{1}{R_0}$
+
+- El máximo de infectados es
+$I_{max}=1-\frac{1+\ln(R_0)}{R_0}$
+
+- Para $R_0\leq 1$ tenemos equilibrio *free-disease* y con $R_0 > 1$ se tiene el siguiente punto de equilibrio $\left( S^*=\frac{N}{R_0},I^*=0,R^*=N(1-\frac{1}{R_0})\right)$
+
+
+2. Los siguientes datos fueron recogidos durante un brote de influenza en una escuela del internado masculino en Inglaterra en 1978 y han sido ampliamente estudiados en la modelización de enfermedades como el modelo SIR.
+
+![Influenza internado UK 1978](https://qubeshub.org/publications/2956/3171?media=Image:master)
+
+El brote ocurrió en una escuela privada, con una población de estudiantes relativamente constante y aislada del exterior.
+El número total de estudiantes fue de 763.
+
+Los datos muestran el número de infantes infectadxs por día.
+
+
+- Grafica el número de infectados y discute porque si o no se podría modelar con un SIR (con o sin demografía)
+- Si sabes que los infantes se recupera después de , en promedio, dos días: determian la $\gamma$ y encuentra la $\beta$ para que el ajuste, al menos visualmente, sea bueno para estos datos.¿Cuál es el valor de $R_0$?
+
