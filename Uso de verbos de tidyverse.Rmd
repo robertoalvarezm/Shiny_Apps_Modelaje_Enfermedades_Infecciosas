@@ -1,0 +1,360 @@
+---
+title: "Uso de verbos de tidyverse"
+author: "Roberto Álvarez"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    fig_height: 8
+    fig_width: 13
+    number_section: yes
+    theme: cerulean
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+---
+# Lectura y manejo de datos
+El conjunot de librerías agrupadas en `tidyverse` es un ecosistema para trabajar con datos. Ustedes ya han trabajado con librerías dentro de este ecosistema, por ejemplo la librería `ggplot2` es parte de esta.
+
+
+```{r}
+library(tidyverse)
+```
+
+
+Con ello contamos con un conjunto de funciones para trabajar con datos. En particular, usaremos la librería `dplyr` dentro de este ecosistema. Es decir podemos solo instalar esta librería o instalarla todo `tidyverse`.
+
+Por ejemplo podemos descargar tablas y leerlas con estas funciones
+
+Trabajaremos con la tabla de anotación de *E. coli* pero lo que sigue funciona con cualquier tabla que se quiera procesar.
+
+```{r}
+anotacion_ecoli_k12<-read_csv("01_Raw_Data/proteins_167_161521.csv")
+```
+
+Observen el guión bajo `_` para la instrucción de lectura para csv en constraste con la que ya se ha trabajado previamente que lleva un punto `.`
+
+Para dar un vistazo rápido de lo que contiene la tabla podemos usar la función `glimpse()`
+
+```{r}
+glimpse(anotacion_ecoli_k12)
+```
+
+## Verbos
+
+### Filtrar
+
+
+```{r}
+filter(anotacion_ecoli_k12,Strand=="+")->positivos
+```
+
+```{r}
+glimpse(positivos)
+```
+
+Si lo quisieramos hacer en R base lo haríamos de la siguiente manera:
+
+```{r}
+anotacion_ecoli_k12[which(anotacion_ecoli_k12$Strand=="+"),]->positivos2
+```
+
+Noten la diferencia entre ambos enfoques. Acá abajo mostramos que, ambas opciones, dan resultados idénticos. 
+
+```{r}
+any(positivos !=positivos2)
+```
+
+
+Por ejemplo para seleccionar  aquellas proteínas entre 50 y 75 aa podemos usar
+
+```{r}
+filter(anotacion_ecoli_k12,50 <= Length & Length <=75)
+```
+
+
+### Ejercicios
+
+1. ¿Cuántas proteínas están en la cadena negativa y son mayores a 100 aa. ?
+
+```{r}
+glimpse(filter(anotacion_ecoli_k12,Strand=="-" & Length > 100))
+filter(anotacion_ecoli_k12, Strand== "-" & Length >100 )
+```
+
+2. ¿Existen proteínas con tamaño EXACTAMENTE de 100 aa en la cadena negativa?
+Si es así, específica su nombre.
+
+```{r}
+glimpse(filter(anotacion_ecoli_k12,Strand=="-" & Length == 100))->idk
+idk$`Protein Name`
+##
+filter(anotacion_ecoli_k12, Strand=="-" & Length == 100) -> all_oh
+##
+filter(anotacion_ecoli_k12, Strand== "-" & Length==100 )
+##
+exac100 <- filter(anotacion_ecoli_k12, Strand == "-" & Length == 100)
+exac100["Accession"]
+```
+
+
+3. ¿Cuántas proteínas son mayores a la longitud promedio y cuántas están en la cadena positiva y cuántas en la negativa?
+
+
+```{r}
+glimpse(filter(anotacion_ecoli_k12, Strand=="+" & Length>mean(anotacion_ecoli_k12$Length)))
+glimpse(filter(anotacion_ecoli_k12, Strand=="-" & Length>mean(anotacion_ecoli_k12$Length)))
+
+###
+
+promedio <- mean(anotacion_ecoli_k12$Length)
+promedio
+
+filter(anotacion_ecoli_k12, Strand=="-" & Length > promedio) -> jaja
+filter(anotacion_ecoli_k12, Strand=="+" & Length > promedio) -> jaja2
+dim(jaja)
+dim(jaja2)
+```
+
+## Seleccionar
+
+Esto nos permite seleccionar **columnas completas** repito **columnas completas**
+
+```{r}
+select(anotacion_ecoli_k12,Strand)
+```
+
+
+
+
+```{r}
+select(anotacion_ecoli_k12,c(Locus,Strand))
+```
+
+
+
+También funciona el operador de
+```{r}
+select(anotacion_ecoli_k12,-Strand)
+```
+```{r}
+select(anotacion_ecoli_k12, starts_with("s"))
+select(anotacion_ecoli_k12, contains("th"))
+```
+
+### Ejercicios
+
+1. Seleccionar todas las columnas de tipo chr y todas las de tipo dbl.
+
+```{r}
+anotacion_ecoli_k12 %>% select(where(is.character))
+select(anotacion_ecoli_k12, where(is.character))
+select(anotacion_ecoli_k12, where(is.double))
+```
+
+
+2. Quitar todas las columnas con el nombre del gen y/o de la proteína
+
+
+
+3. Dejar una tabla con su nombre preferido del geon o proteína y que sólo contenag esa información más el strand y el tamaño.
+
+```{r}
+tabla <- select(anotacion_ecoli_k12, c(Accession, Strand, Length))
+head(tabla)
+```
+
+```{r}
+write.csv(tabla,file="03_Results/anotacio_corta_ecoli_K12.csv")
+```
+
+
+## Ordenar
+
+Para ordenar usaremos la función `arrange()`
+
+Por ejemplo
+
+```{r}
+arrange(anotacion_ecoli_k12,Length)
+```
+
+
+```{r}
+arrange(anotacion_ecoli_k12,-Length)
+```
+
+```{r}
+arrange(anotacion_ecoli_k12,Start)
+```
+
+## Crear nuevas variables
+
+```{r}
+mutate(anotacion_ecoli_k12,Length_nucleotides=Stop-Start)
+```
+
+```{r}
+glimpse(anotacion_ecoli_k12)
+```
+
+
+## La tubería `pipe`  `%>%`
+
+Al igual que en `bash`existe un **pipe** para tomar los resultados de forma secuencial de distintas acciones y con ello tener un flujo más natural. Al principio puede ser  confuso, pero con el tiempo, es más simple y terminarán usandolo y (espero) queriendolo
+
+El **pipe**  es un operador que está compuesto de tres símbolos sin espacio entre ellos.
+
+`%>%`
+
+En RStudio el atajo de teclado para generar este símbolo es:
+
+- Ctrl + Shift + M (En Windows)
+- Cmd + Shift + M (Mac)
+
+
+Esto nos permite escribir de forma más natural los verbos de `dplyr`. Por ejemplo para la opción que ya habíamos hecho, seleccionar los genes en la cadena positiva.
+
+```{r}
+filter(anotacion_ecoli_k12,Strand=="+")->positivos
+```
+
+Podemos hacerlo de forma equivalente como
+
+```{r}
+positivos<- anotacion_ecoli_k12 %>% filter(Strand=="+")
+```
+
+Observa como con ello no es necesario poner la base de datos (tabla) y solo se pone la función, en este caso `filter`
+
+Esta forma de ir seleccionando cosas de una tabla tiene más sentido cuando queremos hacer varios filtros. Por ejmplo si además queremos todos aquellos genes de la cadena positiva y que su longitud este entre 100 y 150 aa
+
+```{r}
+dd<-anotacion_ecoli_k12 %>% 
+  filter(Strand=="+") %>% 
+    filter(Length>=100 & Length<=150)
+```
+
+
+```{r}
+glimpse(dd)
+```
+
+Si además queremos que inicien entre el nucleotido 2,500 y 100,000
+
+```{r}
+dd<-anotacion_ecoli_k12 %>% 
+  filter(Strand=="+") %>% 
+    filter(Length>=100 & Length<=150) %>% 
+      filter(Start>=2500 & Start<=100000)
+
+```
+
+
+
+```{r}
+dd
+```
+
+## Ejercicios
+
+Trabaja con la base de datos `starwars`
+
+```{r}
+library(dplyr)
+
+starwars %>% 
+  filter(species == "Droid")
+
+starwars %>% 
+  select(name, ends_with("color"))
+
+starwars %>% 
+  mutate(name, bmi = mass / ((height / 100)  ^ 2)) %>%
+  select(name:mass, bmi)
+
+starwars %>% 
+  arrange(desc(mass))
+
+starwars %>%
+  group_by(species) %>%
+  summarise(
+    n = n(),
+    mass = mean(mass, na.rm = TRUE)
+  ) %>%
+  filter(
+    n > 1,
+    mass > 50
+  )
+```
+
+1. Explica qué hace cada línea de código
+2. Selecciona a aquellos y clasifica a todos por los personajes por su índice de masa corporal.
+3. Selecciona a todos los humanos y agrega una columna que los clasifique por `gender`y cuente cuántos hay de cada uno.
+4. Selecciona solo a los de Tattooine, masculinos, cuyos color de ojos sean azules.
+
+
+## Datos COVID-México 
+
+
+[Datos abiertos de la secretaría de salud](https://datosabiertos.salud.gob.mx/gobmx/salud/datos_abiertos/datos_abiertos_covid19.zip)
+
+
+
+## Guardar y leer datos desde R con RDS y RData 
+
+
+Podemos leer la base de datos, incluso sin descomprimirlos, directamente en nuestra sesión de R
+
+
+```{r}
+bd<-read_csv("01_Raw_Data/221129COVID19MEXICO.csv.zip")
+```
+
+```{r}
+glimpse(bd)
+```
+
+
+Sin embargo, esto puede ser muy leeeento y ocupar muchísimo espacio de memoria. Una forma de hacerlo  es leerlo vía RDS o RData
+
+
+### Guardar un objeto de R 
+
+
+```{r}
+# Guardar un objeto a un archivo
+saveRDS(bd, file = "03_Results/my_bd.rds")
+# Restablecer un objeto
+# readRDS(file = "03_Results/my_bd.rds")
+```
+
+
+
+```{r}
+data("mtcars")
+# Guardar un objeto  a un archivo
+saveRDS(mtcars, "03_Results/mtcars.rds")
+# Cargar con otro nombre
+my_data <- readRDS("03_Results/mtcars.rds")
+```
+
+
+
+```{r}
+# data1<-1:1000
+# data2<-data.frame(x=1:1000, y=sin(1:1000))
+# Guardar un objeto con formato RData
+
+# save(data1, file = "03_Results/data.RData")
+# Guardar múltiples objetos
+
+# save(data1, data2, file = "03_Results/data.RData")
+# Cargar los datos
+load("03_Results/data.RData")
+```
+
