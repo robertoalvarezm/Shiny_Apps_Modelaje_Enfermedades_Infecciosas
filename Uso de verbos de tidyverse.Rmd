@@ -18,7 +18,7 @@ output:
     toc: yes
 ---
 # Lectura y manejo de datos
-El conjunot de librerías agrupadas en `tidyverse` es un ecosistema para trabajar con datos. Ustedes ya han trabajado con librerías dentro de este ecosistema, por ejemplo la librería `ggplot2` es parte de esta.
+El conjunto de librerías agrupadas en `tidyverse` es un ecosistema para trabajar con datos. Ustedes ya han trabajado con librerías dentro de este ecosistema, por ejemplo la librería `ggplot2` es parte de esta.
 
 
 ```{r}
@@ -296,6 +296,304 @@ starwars %>%
 2. Selecciona a aquellos y clasifica a todos por los personajes por su índice de masa corporal.
 3. Selecciona a todos los humanos y agrega una columna que los clasifique por `gender`y cuente cuántos hay de cada uno.
 4. Selecciona solo a los de Tattooine, masculinos, cuyos color de ojos sean azules.
+
+## Ejercicios resueltos
+
+
+1.    Filtrado de personajes humanos
+Utiliza la función `filter()` para seleccionar solo los personajes que son de la especie "Human".
+
+
+```{r}
+library(dplyr)
+# Filtra los personajes que son de la especie "Human"
+humanos <- starwars %>% 
+  filter(species == "Human")
+print(humanos)
+
+```
+
+2.    Selección de columnas relevantes
+Selecciona las columnas name, height, mass, y homeworld de la base de datos.
+
+```{r}
+# Selecciona las columnas name, height, mass, y homeworld
+seleccion <- starwars %>% 
+  select(name, height, mass, homeworld)
+print(seleccion)
+```
+
+3.    Ordenar personajes por altura
+Ordena los personajes de mayor a menor altura usando `arrange()`.
+
+```{r}
+# Ordena los personajes de mayor a menor altura
+ordenados_altura <- starwars %>% 
+  arrange(desc(height))
+print(ordenados_altura)
+
+```
+
+4.    Crear una nueva columna para el índice de masa corporal (IMC)
+Calcula el índice de masa corporal (IMC) de los personajes (suponiendo que la masa es el peso en kg y la altura en metros), y añade una nueva columna utilizando `mutate()`.
+
+
+```{r}
+# Crea una nueva columna IMC (BMI en inglés)
+imc <- starwars %>% 
+  mutate(BMI = mass / (height/100)^2)
+print(imc)
+
+```
+
+5.    Resumen de las alturas y masas promedio por especie
+Utiliza `group_by()` para agrupar los datos por especie y `summarise()` para calcular la altura y masa promedio de cada especie.
+
+```{r}
+# Agrupa por especie y calcula la altura y masa promedio
+resumen_especie <- starwars %>% 
+  group_by(species) %>% 
+  summarise(altura_promedio = mean(height, na.rm = TRUE),
+            masa_promedio = mean(mass, na.rm = TRUE))
+print(resumen_especie)
+```
+
+6.    Contar el número de personajes por género
+Usa `count()` para contar cuántos personajes hay de cada género (gender).
+
+```{r}
+# Cuenta el número de personajes por género
+conteo_genero <- starwars %>% 
+  count(gender)
+print(conteo_genero)
+
+```
+
+7.    Filtrar personajes con masa y altura disponible
+Filtra los personajes que tienen datos de masa y altura no nulos usando `filter()`.
+
+```{r}
+# Filtra los personajes que tienen masa y altura disponibles
+personajes_completos <- starwars %>% 
+  filter(!is.na(mass) & !is.na(height))
+print(personajes_completos)
+
+```
+
+8.    Encontrar las 5 especies más comunes
+Encuentra las 5 especies más comunes utilizando `count()` y `top_n()`.
+
+```{r}
+# Encuentra las 5 especies más comunes
+especies_comunes <- starwars %>% 
+  count(species, sort = TRUE) %>% 
+  top_n(5)
+print(especies_comunes)
+
+```
+
+
+9.    Agrupar por color de ojos y calcular altura promedio
+Agrupa los personajes por el color de ojos (eye_color) y calcula la altura promedio de cada grupo.
+
+
+```{r}
+# Agrupa por color de ojos y calcula la altura promedio
+resumen_ojos <- starwars %>% 
+  group_by(eye_color) %>% 
+  summarise(altura_promedio = mean(height, na.rm = TRUE))
+print(resumen_ojos)
+
+```
+
+
+10.   Ejercicio 10: Filtrar personajes que tienen una nave (starship)
+Filtra a los personajes que tienen información sobre alguna nave (starships no es NA).
+
+```{r}
+# Filtra personajes que tienen una nave
+con_nave <- starwars %>% 
+  filter(!is.na(starships))
+print(con_nave)
+
+```
+
+11.   Ejercicio Extra: Personajes más pesados por especie
+Encuentra el personaje más pesado de cada especie usando `group_by()` y `slice_max()`.
+
+
+```{r}
+# Encuentra el personaje más pesado de cada especie
+personaje_mas_pesado <- starwars %>% 
+  group_by(species) %>% 
+  slice_max(mass, n = 1, with_ties = FALSE)
+print(personaje_mas_pesado)
+```
+
+### Ejericios adicionales
+
+
+Ejemplo 1: Crear varias columnas nuevas con `mutate()`
+Puedes crear más de una nueva columna en un solo `mutate()`. Vamos a calcular tanto el IMC como una clasificación según el IMC (bajo, normal, sobrepeso, obesidad).
+
+```{r}
+# Crear IMC y categoría de IMC en una sola operación
+imc_categorias <- starwars %>% 
+  mutate(
+    BMI = mass / (height / 100)^2,
+    BMI_category = case_when(
+      BMI < 18.5 ~ "Bajo peso",
+      BMI >= 18.5 & BMI < 25 ~ "Normal",
+      BMI >= 25 & BMI < 30 ~ "Sobrepeso",
+      BMI >= 30 ~ "Obesidad",
+      TRUE ~ NA_character_  # Para manejar posibles valores NA
+    )
+  )
+print(imc_categorias %>% select(name, mass, height, BMI, BMI_category))
+
+```
+
+
+Ejemplo 2: Usar `mutate()` para condicionales y lógicas
+Puedes agregar una columna lógica para identificar si un personaje es considerado alto (más de 180 cm).
+
+```{r}
+# Identificar si los personajes son considerados altos (más de 180 cm)
+personajes_altos <- starwars %>% 
+  mutate(es_alto = if_else(height > 180, TRUE, FALSE))
+print(personajes_altos %>% select(name, height, es_alto))
+```
+
+
+Ejemplo 3: Resumir y agrupar con `group_by()` y `summarise()`
+Agrupa los personajes por su planeta natal (homeworld) y calcula estadísticas descriptivas como la altura promedio, la masa promedio y el número de personajes por cada planeta.
+
+```{r}
+# Agrupar por planeta natal y resumir altura, masa y conteo de personajes
+resumen_planetas <- starwars %>% 
+  group_by(homeworld) %>% 
+  summarise(
+    altura_promedio = mean(height, na.rm = TRUE),
+    masa_promedio = mean(mass, na.rm = TRUE),
+    n_personajes = n()
+  ) %>% 
+  arrange(desc(n_personajes))  # Ordenar por número de personajes
+print(resumen_planetas)
+
+```
+
+
+Ejemplo 4: Agrupar por varias variables
+Es posible agrupar por más de una variable. Aquí agrupamos por especie y género para obtener la altura y masa promedio de cada combinación de estos grupos.
+
+
+```{r}
+# Agrupar por especie y género y calcular estadísticas
+resumen_especie_genero <- starwars %>% 
+  group_by(species, gender) %>% 
+  summarise(
+    altura_promedio = mean(height, na.rm = TRUE),
+    masa_promedio = mean(mass, na.rm = TRUE),
+    n_personajes = n()
+  ) %>% 
+  arrange(desc(n_personajes))
+print(resumen_especie_genero)
+
+```
+
+Ejemplo 5: Uso de `n()` dentro de `summarise()` para contar observaciones
+En este caso, usamos `n()` para contar cuántos personajes existen por cada combinación de especie y género.
+
+```{r}
+# Contar personajes por especie y género
+conteo_personajes <- starwars %>% 
+  group_by(species, gender) %>% 
+  summarise(n_personajes = n()) %>% 
+  arrange(desc(n_personajes))
+print(conteo_personajes)
+
+```
+
+
+Ejemplo 6: Calcular proporciones dentro de un grupo
+Si deseas calcular proporciones dentro de cada grupo, puedes usar `n()` junto con alguna otra operación. Por ejemplo, calcula el porcentaje de personajes de cada género dentro de cada especie.
+
+```{r}
+# Calcular proporciones por género dentro de cada especie
+proporciones_genero <- starwars %>% 
+  group_by(species, gender) %>% 
+  summarise(n_personajes = n()) %>% 
+  mutate(proporcion = n_personajes / sum(n_personajes)) %>% 
+  arrange(desc(proporcion))
+print(proporciones_genero)
+```
+
+
+Ejemplo 7: Crear columnas de resumen condicionalmente
+Puedes usar `summarise()` para hacer resúmenes condicionales. Aquí calculamos la altura y masa promedio solo para los personajes que pertenecen a la especie "Human".
+
+
+```{r}
+# Resumen condicional solo para humanos
+resumen_humanos <- starwars %>% 
+  filter(species == "Human") %>% 
+  summarise(
+    altura_promedio = mean(height, na.rm = TRUE),
+    masa_promedio = mean(mass, na.rm = TRUE)
+  )
+print(resumen_humanos)
+
+```
+
+Ejemplo 8: Agrupación y mutación conjunta
+Después de agrupar, puedes usar `mutate()` en lugar de `summarise()` para crear nuevas columnas sin resumir los datos. En este ejemplo, agrupamos por especie y creamos una columna que indica la diferencia de masa de cada personaje con la masa promedio de su especie.
+
+
+```{r}
+# Calcular la diferencia de masa respecto al promedio de su especie
+masa_diferencia <- starwars %>% 
+  group_by(species) %>% 
+  mutate(masa_promedio = mean(mass, na.rm = TRUE),
+         diferencia_masa = mass - masa_promedio) %>% 
+  select(name, species, mass, masa_promedio, diferencia_masa)
+print(masa_diferencia)
+
+```
+
+Ejemplo 9: Resumir usando varias estadísticas a la vez
+Puedes calcular múltiples estadísticas dentro de un solo `summarise()`. Por ejemplo, calcula la altura mínima, máxima, y promedio por color de ojos.
+
+
+```{r}
+# Calcular estadísticas descriptivas de altura por color de ojos
+resumen_ojos_altura <- starwars %>% 
+  group_by(eye_color) %>% 
+  summarise(
+    altura_min = min(height, na.rm = TRUE),
+    altura_max = max(height, na.rm = TRUE),
+    altura_promedio = mean(height, na.rm = TRUE)
+  )
+print(resumen_ojos_altura)
+
+```
+
+Ejemplo 10: Agrupación y rangos
+Puedes calcular el rango de una variable dentro de cada grupo. Aquí encontramos los personajes más altos y más bajos dentro de cada especie.
+
+
+```{r}
+# Encontrar el rango de altura dentro de cada especie
+rango_altura_especie <- starwars %>% 
+  group_by(species) %>% 
+  summarise(
+    altura_max = max(height, na.rm = TRUE),
+    altura_min = min(height, na.rm = TRUE)
+  ) %>% 
+  arrange(desc(altura_max))
+print(rango_altura_especie)
+
+```
+
 
 
 ## Datos COVID-México 
