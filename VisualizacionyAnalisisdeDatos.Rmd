@@ -1,0 +1,473 @@
+---
+title: "Taller análisis esoacial de datos de salud pública"
+author: "Roberto Álvarez"
+date: "7/9/2021"
+output: html_document
+---
+
+# Cargar las librerías
+
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(sf)
+library(mapview)
+library(GADMTools)
+library(ggspatial)
+library(leaflet)
+library(leaflet.extras2)
+library(spdep)
+library(spatstat)  
+library(raster)
+library(smacpod)
+library(ggspatial)
+library(DT)
+```
+
+
+# Caso de estudio 
+## Cargar los datos
+
+```{r}
+covid <- read_csv(url("https://zenodo.org/record/4915889/files/covid19data.csv?download=1"))
+```
+
+
+```{r}
+covid_p <- covid %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326)
+```
+
+
+```{r}
+covid_p %>%
+  filter(FECHA_RESULTADO=="2020-12-11") %>%
+  ggplot() +
+  geom_sf()
+```
+
+
+
+
+```{r}
+m_p<-covid_p %>% filter(FECHA_RESULTADO == "2020-12-10") %>% 
+  mapview(layer.name="puntos")
+
+m_p
+```
+
+
+```{r}
+peru <- gadm_sf_loadCountries("PER", level=3)
+lima_sf <- peru %>%
+  pluck("sf") %>%
+  # Filtramos los datos espaciales solo de Lima metropolitana
+  filter(NAME_2 == "Lima") %>%
+  # Editamos algunos errores en nuestros datos espaciales
+  mutate(NAME_3 = ifelse(NAME_3 == "Magdalena Vieja",
+                         "Pueblo Libre", NAME_3))
+```
+
+
+```{r}
+mexico<-gadm_sf_loadCountries("MEX",level=2)
+cdmx_sf<-mexico %>%
+  pluck("sf")
+```
+
+
+
+```{r}
+mexico
+```
+
+
+```{r}
+covid_count_mx <- covid %>%
+  group_by(DISTRITO, FECHA_RESULTADO) %>%
+  summarise(casos = n()) %>%
+  ungroup() %>%
+  complete(FECHA_RESULTADO = seq.Date(min(FECHA_RESULTADO, na.rm =T),            max(FECHA_RESULTADO, na.rm = T),                                      by="day"),
+           nesting(DISTRITO), fill = list(n = 0))
+```
+
+
+
+
+```{r}
+covid_count <- covid %>%
+  group_by(DISTRITO, FECHA_RESULTADO) %>%
+  summarise(casos = n()) %>%
+  ungroup() %>%
+  complete(FECHA_RESULTADO = seq.Date(min(FECHA_RESULTADO, na.rm =T),
+                                      max(FECHA_RESULTADO, na.rm = T),
+                                      by="day"),
+           nesting(DISTRITO), fill = list(n = 0))
+
+covid_sf <- lima_sf %>%
+  mutate(DISTRITO = toupper(NAME_3)) %>%
+  full_join(covid_count, by = "DISTRITO", "FECHA_RESULTADO")
+
+class(covid_sf)
+```
+
+
+
+```{r}
+covid_sf %>%
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  ggplot() +
+  geom_sf()
+```
+
+
+
+```{r}
+m_sf <- covid_sf %>% 
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  mapview(layer.name = "distritos")
+
+m_sf
+```
+
+
+
+# Múltiples capas
+
+
+```{r}
+ggplot() +
+  geom_sf(data = covid_sf %>% 
+            filter(FECHA_RESULTADO == "2020-12-11")) + 
+  geom_sf(data = covid_p %>% 
+            filter(FECHA_RESULTADO == "2020-12-11"))
+```
+
+
+
+```{r}
+m_p +m_sf
+```
+
+
+
+# Visualización de datos espaciales
+
+
+## Patrones de puntos
+
+```{r}
+covid_p %>%
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  ggplot() +
+  geom_sf(aes(col = SEXO), alpha = .2) +
+  facet_wrap(.~SEXO)
+```
+
+
+```{r}
+p1<-covid_p %>% 
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  mapview(layer.name = "points", zcol = "SEXO", burst = T)
+p1
+
+```
+
+
+```{r}
+library(plotly)
+
+```
+
+
+
+# Dos o más variables
+
+```{r}
+covid_p %>%
+  filter(FECHA_RESULTADO == "2020-04-11" |
+         FECHA_RESULTADO == "2020-12-11") %>%
+  ggplot() +
+  geom_sf(aes(col = SEXO), alpha = .2) +
+  facet_grid(SEXO~FECHA_RESULTADO) +
+  guides(col = F)
+```
+
+```{r}
+m1 <- covid_p %>%
+  filter(FECHA_RESULTADO == "2020-04-11") %>%
+  mapview(zcol = "SEXO", layer.name = "2020-04-11 - SEXO")
+
+m2 <- covid_p %>%
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  mapview(zcol = "SEXO", layer.name = "2020-12-11 - SEXO")
+```
+
+
+```{r}
+m1 | m2
+```
+
+
+
+
+# Composición
+
+
+```{r}
+covid_p %>%
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  ggplot() +
+  geom_sf(data = covid_sf) +
+  geom_sf(aes(col = EDAD), alpha = .2) +
+  scale_color_viridis_c(option = "B") +
+  annotation_scale() +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_nautical)+
+  theme_bw()
+```
+
+
+
+# Datos en polígonos
+
+## Una variable
+
+
+```{r}
+covid_sf %>%
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  ggplot() +
+  geom_sf(aes(fill = casos))
+```
+
+
+
+
+
+
+```{r}
+covid_sf %>% 
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  mapview(layer.name = "casos", zcol = "casos")
+```
+
+
+## Dos o más variable
+
+
+```{r}
+covid_sf %>%
+  filter(FECHA_RESULTADO == "2020-04-11" |
+         FECHA_RESULTADO == "2020-12-11") %>%
+  ggplot() +
+  geom_sf(aes(fill = casos)) +
+  facet_grid(.~FECHA_RESULTADO)
+```
+
+
+
+
+```{r}
+d1 <- covid_sf %>%
+  filter(FECHA_RESULTADO == "2020-04-11") %>%
+  mapview(zcol = "casos", layer.name = "2020-04-11 - casos")
+
+d2 <- covid_sf %>%
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  mapview(zcol = "casos", layer.name = "2020-12-11 - casos")
+```
+
+
+
+```{r}
+d1 | d2
+```
+
+
+
+# Composición
+
+```{r}
+covid_sf %>%
+  filter(FECHA_RESULTADO == "2020-12-11") %>%
+  ggplot() +
+  geom_sf(aes(fill = casos)) +
+  scale_fill_viridis_c(option = "F", direction = -1) +
+  annotation_scale() +
+  annotation_north_arrow(location = "tr",
+                         style = north_arrow_nautical)+
+  theme_void()
+```
+
+
+
+# Variación espacial del riesgo
+
+```{r}
+covid_subset <- covid %>%
+  filter(FECHA_RESULTADO == "2020-05-05")
+
+covid_win <- owin(xrange = range(covid_subset$lon),
+                  yrange = range(covid_subset$lat))
+```
+
+
+
+```{r}
+covid_ppp  <-  ppp(covid_subset$lon, 
+                   covid_subset$lat, 
+                   window = covid_win)
+```
+
+
+
+
+```{r}
+densidad_raster_cov <- raster(density(covid_ppp, bw.ppl), 
+                              crs = 4326) %>%
+  mask(lima_sf)
+```
+
+
+
+```{r}
+densidad_raster_cov %>% 
+  mapview()
+```
+
+
+
+
+# Detección de clústers
+
+## Datos puntuales
+
+
+## Estadísticas de escaneo espacial (*Spatial Scan Statistics*-SSS)
+
+
+
+```{r}
+covid_subset_posi <- covid %>%
+  filter(FECHA_RESULTADO == "2020-05-05") %>%
+  mutate(positividad = ifelse(METODODX == "PCR", 1, 0))
+
+covid_scan_ppp <- ppp(covid_subset_posi$lon, 
+                      covid_subset_posi$lat,
+                      range(covid_subset_posi$lon),
+                      range(covid_subset_posi$lat),
+                      marks = as.factor(covid_subset_posi$positividad))
+```
+
+
+
+```{r}
+covid_scan_test <- spscan.test(covid_scan_ppp,
+                               nsim = 49, case = 2, 
+                               maxd=.15, alpha = 0.05)
+```
+
+
+```{r}
+covid_scan_test
+```
+
+
+```{r}
+# Construimos el centroide del clúster
+cent <- tibble(lon = covid_scan_test$clusters[[1]]$coords[,1],
+               lat = covid_scan_test$clusters[[1]]$coords[,2]) %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = F)  
+
+# Construimos el área del clúster en base al radio
+clust <- cent %>%
+  st_buffer(dist = covid_scan_test$clusters[[1]]$r)
+```
+
+
+
+
+```{r}
+cluster <- mapview(clust, alpha.regions = 0, color = "red") 
+
+points <- covid_subset_posi %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
+  mapview(zcol = "positividad", alpha.regions = .4, alpha = 0) 
+
+cluster + points 
+cluster | points
+```
+
+
+
+# Datos agregados (en polígonos)
+# Autocprrelación espacial (global):Moran
+
+
+
+```{r}
+covid_sf_subset <- covid_sf %>%
+  filter(FECHA_RESULTADO == "2020-05-05") %>%
+  mutate(casos = replace_na(casos, 0))
+```
+
+
+
+
+
+
+
+```{r}
+covid.nb <- poly2nb(covid_sf_subset, queen=TRUE,snap = 0.13)
+```
+
+
+
+
+```{r}
+covid.lw <- nb2listw(covid.nb, style="W", zero.policy=TRUE)
+```
+
+
+
+```{r}
+moran.test(covid_sf_subset$casos, covid.lw)
+```
+
+
+
+# Autocorrelación espacial (local):Getis Ord
+
+```{r}
+breaks <- c(-Inf, -1.96, 1.96, Inf)
+labels <- c("Cold spot",
+            "Not significant",
+            "Hot spot")
+```
+
+
+
+```{r}
+covid_lg <- localG(covid_sf_subset$casos, covid.lw)
+
+covid_sf_lisa<-covid_sf_subset %>% 
+  mutate(cluster_lg=cut(covid_lg, include.lowest = TRUE,
+                        breaks = breaks, 
+                        labels = labels))
+```
+
+
+
+```{r}
+covid_sf_lisa %>%
+          ggplot() + 
+          geom_sf(aes(fill=cluster_lg)) +
+          scale_fill_brewer(name="Clúster", 
+                            palette = "RdBu", direction=-1) +
+  theme_bw()
+```
+
+
+
+
